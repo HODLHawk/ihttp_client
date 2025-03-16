@@ -4,18 +4,24 @@
 import PackageDescription
 
 let package = Package(
-    name: "HttpClient",
-    products: [
-        // Products define the executables and libraries a package produces, making them visible to other packages.
-        .library(
-            name: "HttpClient",
-            targets: ["HttpClient"]),
-    ],
-    targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
-        .target(
-            name: "HttpClient"),
-
-    ]
+  name: "HttpClient",
+  platforms: [
+    .macOS(.v14),
+    .iOS(.v16),
+    .tvOS(.v16),
+    .watchOS(.v7)
+  ],
+  products: [
+    // Products define the executables and libraries a package produces, making them visible to other packages.
+    .library(
+      name: "HttpClient",
+      targets: ["HttpClient"]),
+  ],
+  targets: [
+    // Targets are the basic building blocks of a package, defining a module or a test suite.
+    // Targets can depend on other targets in this package and products from dependencies.
+    .target(
+      name: "HttpClient"),
+    
+  ]
 )
