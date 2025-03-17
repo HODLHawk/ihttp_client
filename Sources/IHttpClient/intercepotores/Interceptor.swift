@@ -18,3 +18,16 @@ public protocol Interceptor: Sendable {
     client: IHttpClient
   ) async throws -> HTTPResponse<T>?
 }
+
+public extension Interceptor {
+  func willSend(request: inout URLRequest) {}
+  
+  func didReceive(response: URLResponse, data: Data) {}
+  
+  func onError<T: Decodable>(
+    response: HTTPURLResponse,
+    data: Data,
+    originalRequest: (path: String, method: HTTPMethod, parameters: HTTPParameters?, headers: [String: String]?),
+    client: IHttpClient
+  ) async throws -> HTTPResponse<T>? { nil }
+}
