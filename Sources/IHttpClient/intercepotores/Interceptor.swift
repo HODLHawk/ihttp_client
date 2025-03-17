@@ -30,7 +30,7 @@ extension Interceptor {
     data: Data,
     originalRequest: (path: String, method: HTTPMethod, parameters: HTTPParameters?, headers: [String: String]?),
     client: IHttpClient
-  ) async throws -> HTTPResponse<T>? {
+  ) async throws -> HTTPResponse<T>? where T : Decodable, T : Sendable {
     return nil
   }
 }
