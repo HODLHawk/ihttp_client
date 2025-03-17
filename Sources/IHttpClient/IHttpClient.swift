@@ -55,7 +55,7 @@ public class IHttpClient {
       }
       
       if let httpResponse = response as? HTTPURLResponse {
-        // Відправляємо відповідь інтерсепторам для обробки помилок
+        // We send the response to interceptors for error handling
         for interceptor in interceptors {
           if let retriedResponse = try? await interceptor.onError(
             response: httpResponse,
@@ -67,7 +67,7 @@ public class IHttpClient {
           }
         }
         
-        // Стандартна обробка помилок, якщо жоден інтерсептор не обробив помилку
+        // Standard error handling if no interceptor has handled the error
         switch httpResponse.statusCode {
         case 300..<500:
           let clientErrorResponse = try? JSONDecoder().decode(APIErrorResponse.self, from: data)
@@ -87,8 +87,8 @@ public class IHttpClient {
     }
   }
   
-  // Допоміжний метод для відправки "чистого" запиту без інтерсепторів
-  // Використовується в TokenRefreshInterceptor для запобігання рекурсії
+  // Helper method for sending a "pure" request without interceptors
+  // Used in TokenRefreshInterceptor to prevent recursion
   public func performRawRequest<T: Decodable>(
     _ path: String,
     method: HTTPMethod = .get,

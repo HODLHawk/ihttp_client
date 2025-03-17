@@ -19,7 +19,7 @@ public protocol Interceptor {
   ) async throws -> Any?
 }
 
-// Базова реалізація для зменшення обов'язкового коду в імплементаціях
+// Base implementation to reduce required code in implementations
 extension Interceptor {
   func didReceive(response: URLResponse, data: Data) {}
 
