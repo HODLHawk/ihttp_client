@@ -7,7 +7,7 @@
 
 import Foundation
 
-public class IHttpClient {
+public final actor IHttpClient {
   private let session: URLSession
   private let baseURL: URL
   private var interceptors: [Interceptor] = []
@@ -24,7 +24,7 @@ public class IHttpClient {
   public func request<T: Decodable>(
     _ path: String,
     method: HTTPMethod = .get,
-    parameters: [String: Any]? = nil,
+    parameters: [String: Sendable]? = nil,
     headers: [String: String]? = nil
   ) async throws -> HTTPResponse<T> {
     
@@ -62,7 +62,7 @@ public class IHttpClient {
             data: data,
             originalRequest: (path: path, method: method, parameters: parameters, headers: headers),
             client: self
-          ) as? HTTPResponse<T> {
+          ) as HTTPResponse<T>? {
             return retriedResponse
           }
         }
