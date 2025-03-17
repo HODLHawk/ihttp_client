@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-  name: "HttpClient",
+  name: "IHttpClient",
   platforms: [
     .macOS(.v14),
     .iOS(.v16),
@@ -14,14 +14,14 @@ let package = Package(
   products: [
     // Products define the executables and libraries a package produces, making them visible to other packages.
     .library(
-      name: "HttpClient",
-      targets: ["HttpClient"]),
+      name: "IHttpClient",
+      targets: ["IHttpClient"]),
   ],
   targets: [
     // Targets are the basic building blocks of a package, defining a module or a test suite.
     // Targets can depend on other targets in this package and products from dependencies.
     .target(
-      name: "HttpClient"),
+      name: "IHttpClient"),
     
   ]
 )
