@@ -8,7 +8,7 @@
 import Foundation
 
 // MARK: - Interceptor Protocol
-protocol Interceptor {
+public protocol Interceptor {
   func willSend(request: inout URLRequest)
   func didReceive(response: URLResponse, data: Data)
   func onError(

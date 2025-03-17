@@ -9,7 +9,7 @@ import Foundation
 
 let unknowClientError: String = "Unknown client error"
 
-enum HTTPError: Error {
+public enum HTTPError: Error, Sendable {
   case unknown
   case clientError(Int, APIErrorResponse?)
   case serverError(Int)

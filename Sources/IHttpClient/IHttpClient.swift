@@ -12,16 +12,16 @@ public class IHttpClient {
   private let baseURL: URL
   private var interceptors: [Interceptor] = []
   
-  init(baseURL: String, session: URLSession = .shared) {
+  public init(baseURL: String, session: URLSession = .shared) {
     self.baseURL = URL(string: baseURL)!
     self.session = session
   }
   
-  func addInterceptor(_ interceptor: Interceptor) {
+  public func addInterceptor(_ interceptor: Interceptor) {
     interceptors.append(interceptor)
   }
   
-  func request<T: Decodable>(
+  public func request<T: Decodable>(
     _ path: String,
     method: HTTPMethod = .get,
     parameters: [String: Any]? = nil,
@@ -89,7 +89,7 @@ public class IHttpClient {
   
   // Допоміжний метод для відправки "чистого" запиту без інтерсепторів
   // Використовується в TokenRefreshInterceptor для запобігання рекурсії
-  func performRawRequest<T: Decodable>(
+  public func performRawRequest<T: Decodable>(
     _ path: String,
     method: HTTPMethod = .get,
     parameters: [String: Any]? = nil,

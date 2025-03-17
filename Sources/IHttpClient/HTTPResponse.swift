@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct HTTPResponse<T> {
+public struct HTTPResponse<T> {
   let data: T
   let response: URLResponse
 }

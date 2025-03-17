@@ -6,7 +6,7 @@
 //
 
 // MARK: - Additional required types (from original implementation)
-enum HTTPMethod: String {
+public enum HTTPMethod: String {
   case get = "GET"
   case post = "POST"
   case put = "PUT"
