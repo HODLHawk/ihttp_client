@@ -15,7 +15,7 @@ protocol Interceptor {
     response: HTTPURLResponse,
     data: Data,
     originalRequest: (path: String, method: HTTPMethod, parameters: [String: Any]?, headers: [String: String]?),
-    client: HttpClient
+    client: IHttpClient
   ) async throws -> Any?
 }
 
@@ -27,7 +27,7 @@ extension Interceptor {
     response: HTTPURLResponse,
     data: Data,
     originalRequest: (path: String, method: HTTPMethod, parameters: [String: Any]?, headers: [String: String]?),
-    client: HttpClient
+    client: IHttpClient
   ) async throws -> Any? {
     return nil
   }

@@ -28,7 +28,7 @@ class AuthInterceptor: Interceptor {
     response: HTTPURLResponse,
     data: Data,
     originalRequest: (path: String, method: HTTPMethod, parameters: [String: Any]?, headers: [String: String]?),
-    client: HttpClient
+    client: IHttpClient
   ) async throws -> Any? {
     // AuthInterceptor тільки додає токен до запитів, але не обробляє помилки
     return nil

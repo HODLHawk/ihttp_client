@@ -48,7 +48,7 @@ class CookieInterceptor: Interceptor {
     response: HTTPURLResponse,
     data: Data,
     originalRequest: (path: String, method: HTTPMethod, parameters: [String: Any]?, headers: [String: String]?),
-    client: HttpClient
+    client: IHttpClient
   ) async throws -> Any? {
     // CookieInterceptor не обробляє помилки, а тільки отримує куки
     return nil

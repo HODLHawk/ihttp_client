@@ -24,7 +24,7 @@ class TokenRefreshInterceptor: Interceptor {
     response: HTTPURLResponse,
     data: Data,
     originalRequest: (path: String, method: HTTPMethod, parameters: [String: Any]?, headers: [String: String]?),
-    client: HttpClient
+    client: IHttpClient
   ) async throws -> HTTPResponse<T>? {
     if response.statusCode == 401 {
       // Спроба оновлення токена
@@ -59,7 +59,7 @@ class TokenService {
     return UserDefaults.standard.string(forKey: "accessToken")
   }
   
-  func refreshAccessToken(using client: HttpClient) async throws -> String {
+  func refreshAccessToken(using client: IHttpClient) async throws -> String {
     // Логіка оновлення токена через DioClient
     let refreshToken = UserDefaults.standard.string(forKey: "refreshToken") ?? ""
     let response: TokenResponse = try await client.performRawRequest(
