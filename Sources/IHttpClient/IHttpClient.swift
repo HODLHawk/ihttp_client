@@ -21,69 +21,186 @@ public final actor IHttpClient {
     interceptors.append(interceptor)
   }
   
+  //  public func request<T: Decodable>(
+  //    _ path: String,
+  //    method: HTTPMethod = .get,
+  //    parameters: [String: Sendable]? = nil,
+  //    headers: [String: String]? = nil
+  //  ) async throws -> HTTPResponse<T> {
+  //    
+  //    var urlRequest = URLRequest(url: baseURL.appendingPathComponent(path))
+  //    urlRequest.httpMethod = method.rawValue
+  //    headers?.forEach { urlRequest.setValue($0.value, forHTTPHeaderField: $0.key) }
+  //    
+  //    if let parameters = parameters {
+  //      urlRequest.httpBody = try? JSONSerialization.data(withJSONObject: parameters)
+  //      urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+  //    }
+  //    
+  //    // Apply interceptors before sending the request
+  //    for interceptor in interceptors {
+  //      interceptor.willSend(request: &urlRequest)
+  //    }
+  //    
+  //    do {
+  //      let (data, response) = try await session.data(for: urlRequest)
+  //      
+  //      // Apply interceptors after receiving the response
+  //      for interceptor in interceptors {
+  //        interceptor.didReceive(response: response, data: data)
+  //      }
+  //      
+  //      guard !data.isEmpty else {
+  //        throw HTTPError.unknown
+  //      }
+  //      
+  //      if let httpResponse = response as? HTTPURLResponse {
+  //        // We send the response to interceptors for error handling
+  //        for interceptor in interceptors {
+  //          if let retriedResponse = try? await interceptor.onError(
+  //            response: httpResponse,
+  //            data: data,
+  //            originalRequest: (path: path, method: method, parameters: parameters, headers: headers),
+  //            client: self
+  //          ) as HTTPResponse<T>? {
+  //            return retriedResponse
+  //          }
+  //        }
+  //        
+  //        // Standard error handling if no interceptor has handled the error
+  //        switch httpResponse.statusCode {
+  //        case 300..<500:
+  //          let clientErrorResponse = try? JSONDecoder().decode(APIErrorResponse.self, from: data)
+  //          throw HTTPError.clientError(httpResponse.statusCode, clientErrorResponse)
+  //        case 500..<600:
+  //          throw HTTPError.serverError(httpResponse.statusCode)
+  //        default:
+  //          break
+  //        }
+  //      }
+  //      
+  //      let decodedData = try JSONDecoder().decode(T.self, from: data)
+  //      return HTTPResponse(data: decodedData, response: response)
+  //      
+  //    } catch {
+  //      throw error
+  //    }
+  //  }
+  
   public func request<T: Decodable>(
     _ path: String,
     method: HTTPMethod = .get,
     parameters: [String: Sendable]? = nil,
     headers: [String: String]? = nil
   ) async throws -> HTTPResponse<T> {
+    // 1. Створення URLRequest
+    var urlRequest = try createURLRequest(path: path, method: method, parameters: parameters, headers: headers)
     
+    // 2. Застосування інтерсепторів перед відправкою
+    applyInterceptors(for: &urlRequest, interceptors: interceptors)
+    
+    // 3. Виконання мережевого запиту
+    let (data, response) = try await session.data(for: urlRequest)
+    
+    // 4. Застосування інтерсепторів після отримання відповіді
+    applyInterceptors(for: response, data: data, interceptors: interceptors)
+    
+    // 5. Перевірка наявності даних
+    guard !data.isEmpty else {
+      throw HTTPError.unknown
+    }
+    
+    // 6. Обробка помилок через інтерсептори
+    if let httpResponse = response as? HTTPURLResponse,
+       let retriedResponse = try await handleErrorIfNeeded(
+        response: httpResponse,
+        data: data,
+        originalRequest: (path: path, method: method, parameters: parameters, headers: headers),
+        client: self,
+        interceptors: interceptors
+       ) as HTTPResponse<T>? {
+      return retriedResponse
+    }
+    
+    // 7. Стандартна обробка помилок
+    if let httpResponse = response as? HTTPURLResponse {
+      try handleStandardError(response: httpResponse, data: data)
+    }
+    
+    // 8. Декодування даних
+    let decodedData = try JSONDecoder().decode(T.self, from: data)
+    return HTTPResponse(data: decodedData, response: response)
+  }
+  
+  // MARK: - Допоміжні методи
+  
+  /// Створює `URLRequest` на основі параметрів
+  private func createURLRequest(
+    path: String,
+    method: HTTPMethod,
+    parameters: [String: Sendable]?,
+    headers: [String: String]?
+  ) throws -> URLRequest {
     var urlRequest = URLRequest(url: baseURL.appendingPathComponent(path))
     urlRequest.httpMethod = method.rawValue
+    
+    // Додавання заголовків
     headers?.forEach { urlRequest.setValue($0.value, forHTTPHeaderField: $0.key) }
     
+    // Додавання параметрів (якщо вони є)
     if let parameters = parameters {
-      urlRequest.httpBody = try? JSONSerialization.data(withJSONObject: parameters)
+      urlRequest.httpBody = try JSONSerialization.data(withJSONObject: parameters)
       urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
     }
     
-    // Apply interceptors before sending the request
+    return urlRequest
+  }
+  
+  /// Застосовує інтерсептори перед відправкою запиту
+  private func applyInterceptors(for request: inout URLRequest, interceptors: [Interceptor]) {
     for interceptor in interceptors {
-      interceptor.willSend(request: &urlRequest)
+      interceptor.willSend(request: &request)
     }
-    
-    do {
-      let (data, response) = try await session.data(for: urlRequest)
-      
-      // Apply interceptors after receiving the response
-      for interceptor in interceptors {
-        interceptor.didReceive(response: response, data: data)
+  }
+  
+  /// Застосовує інтерсептори після отримання відповіді
+  private func applyInterceptors(for response: URLResponse, data: Data, interceptors: [Interceptor]) {
+    for interceptor in interceptors {
+      interceptor.didReceive(response: response, data: data)
+    }
+  }
+  
+  /// Обробляє помилки через інтерсептори
+  private func handleErrorIfNeeded<T: Decodable>(
+    response: HTTPURLResponse,
+    data: Data,
+    originalRequest: (path: String, method: HTTPMethod, parameters: [String: Sendable]?, headers: [String: String]?),
+    client: IHttpClient,
+    interceptors: [Interceptor]
+  ) async throws -> HTTPResponse<T>? {
+    for interceptor in interceptors {
+      if let retriedResponse = try? await interceptor.onError(
+        response: response,
+        data: data,
+        originalRequest: originalRequest,
+        client: client
+      ) as HTTPResponse<T>? {
+        return retriedResponse
       }
-      
-      guard !data.isEmpty else {
-        throw HTTPError.unknown
-      }
-      
-      if let httpResponse = response as? HTTPURLResponse {
-        // We send the response to interceptors for error handling
-        for interceptor in interceptors {
-          if let retriedResponse = try? await interceptor.onError(
-            response: httpResponse,
-            data: data,
-            originalRequest: (path: path, method: method, parameters: parameters, headers: headers),
-            client: self
-          ) as HTTPResponse<T>? {
-            return retriedResponse
-          }
-        }
-        
-        // Standard error handling if no interceptor has handled the error
-        switch httpResponse.statusCode {
-        case 300..<500:
-          let clientErrorResponse = try? JSONDecoder().decode(APIErrorResponse.self, from: data)
-          throw HTTPError.clientError(httpResponse.statusCode, clientErrorResponse)
-        case 500..<600:
-          throw HTTPError.serverError(httpResponse.statusCode)
-        default:
-          break
-        }
-      }
-      
-      let decodedData = try JSONDecoder().decode(T.self, from: data)
-      return HTTPResponse(data: decodedData, response: response)
-      
-    } catch {
-      throw error
+    }
+    return nil
+  }
+  
+  /// Стандартна обробка помилок
+  private func handleStandardError(response: HTTPURLResponse, data: Data) throws {
+    switch response.statusCode {
+    case 300..<500:
+      let clientErrorResponse = try? JSONDecoder().decode(APIErrorResponse.self, from: data)
+      throw HTTPError.clientError(response.statusCode, clientErrorResponse)
+    case 500..<600:
+      throw HTTPError.serverError(response.statusCode)
+    default:
+      break
     }
   }
   
