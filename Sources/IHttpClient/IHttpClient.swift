@@ -1,5 +1,5 @@
 //
-//  HttpClient.swift
+//  IHttpClient.swift
 //  Shopper-BE
 //
 //  Created by Stepan Bezhuk on 14.03.2025.
