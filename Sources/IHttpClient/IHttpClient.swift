@@ -7,7 +7,7 @@
 
 import Foundation
 
-public class IHttpClient {
+public actor IHttpClient {
   private let session: URLSession
   private let baseURL: URL
   private var interceptors: [Interceptor] = []
