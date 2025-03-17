@@ -9,7 +9,6 @@ import Foundation
 
 public typealias HTTPParameters = [String: Sendable]
 
-// MARK: - Interceptor Protocol
 public protocol Interceptor: Sendable {
   func willSend(request: inout URLRequest)
   func didReceive(response: URLResponse, data: Data)

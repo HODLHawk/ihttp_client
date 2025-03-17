@@ -6,7 +6,6 @@
 //
 
 public struct APIErrorResponse: Decodable, Sendable {
-  // Add your API error response properties here
   public let message: String?
   public let code: String?
   

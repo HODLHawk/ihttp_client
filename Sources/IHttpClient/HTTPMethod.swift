@@ -5,7 +5,6 @@
 //  Created by Stepan Bezhuk on 14.03.2025.
 //
 
-// MARK: - Additional required types (from original implementation)
 public enum HTTPMethod: String, Sendable {
   case get = "GET"
   case post = "POST"
