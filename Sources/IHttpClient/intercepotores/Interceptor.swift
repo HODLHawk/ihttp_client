@@ -20,17 +20,3 @@ public protocol Interceptor: Sendable {
     client: IHttpClient
   ) async throws -> HTTPResponse<T>?
 }
-
-// Base implementation to reduce required code in implementations
-extension Interceptor {
-  func didReceive(response: URLResponse, data: Data) {}
-  
-  func onError<T: Decodable>(
-    response: HTTPURLResponse,
-    data: Data,
-    originalRequest: (path: String, method: HTTPMethod, parameters: HTTPParameters?, headers: [String: String]?),
-    client: IHttpClient
-  ) async throws -> HTTPResponse<T>? where T : Decodable, T : Sendable {
-    return nil
-  }
-}
