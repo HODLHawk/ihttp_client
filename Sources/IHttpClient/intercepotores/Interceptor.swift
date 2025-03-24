@@ -7,6 +7,7 @@
 import Foundation
 
 public typealias HTTPParameters = [String: Sendable]
+public typealias HTTPHeaders = [String: String]
 
 public protocol Interceptor: Sendable {
   func willSend(request: inout URLRequest)
@@ -14,8 +15,8 @@ public protocol Interceptor: Sendable {
   func onError<T: Decodable>(
     response: HTTPURLResponse,
     data: Data,
-    originalRequest: (path: String, method: HTTPMethod, parameters: HTTPParameters?, headers: [String: String]?),
-    client: IHttpClient
+    originalRequest: (path: String, method: HTTPMethod, parameters: HTTPParameters?, headers: HTTPHeaders?),
+    client: DefaultHttpClient
   ) async throws -> HTTPResponse<T>?
 }
 
@@ -27,7 +28,7 @@ public extension Interceptor {
   func onError<T: Decodable>(
     response: HTTPURLResponse,
     data: Data,
-    originalRequest: (path: String, method: HTTPMethod, parameters: HTTPParameters?, headers: [String: String]?),
-    client: IHttpClient
+    originalRequest: (path: String, method: HTTPMethod, parameters: HTTPParameters?, headers: HTTPHeaders?),
+    client: DefaultHttpClient
   ) async throws -> HTTPResponse<T>? { nil }
 }

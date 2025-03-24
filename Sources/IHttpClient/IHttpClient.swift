@@ -6,24 +6,41 @@
 
 import Foundation
 
-public final actor IHttpClient {
+/// Default implementation of HttpClient protocol
+public final actor IHttpClient: DefaultHttpClient {
   private let session: URLSession
   private let baseURL: URL
   private var interceptors: [Interceptor] = []
   
+  /// Initializes a new HTTP client with the specified base URL and session
+  /// - Parameters:
+  ///   - baseURL: The base URL for all requests
+  ///   - session: The URL session to use (defaults to shared session)
   public init(baseURL: String, session: URLSession = .shared) {
-    self.baseURL = URL(string: baseURL)!
+    guard let url = URL(string: baseURL) else {
+      fatalError("Invalid URL: \(baseURL)")
+    }
+    self.baseURL = url
     self.session = session
   }
   
+  /// Add an interceptor to modify requests and responses
+  /// - Parameter interceptor: The interceptor to add
   public func addInterceptor(_ interceptor: Interceptor) {
     interceptors.append(interceptor)
   }
   
+  /// Perform an HTTP request with full interceptor support
+  /// - Parameters:
+  ///   - path: The path to request (appended to the base URL)
+  ///   - method: The HTTP method to use
+  ///   - parameters: The parameters to include in the request
+  ///   - headers: Additional headers to include
+  /// - Returns: The decoded response
   public func request<T: Decodable>(
     _ path: String,
     method: HTTPMethod = .get,
-    parameters: [String: Sendable]? = nil,
+    parameters: HTTPParameters? = nil,
     headers: [String: String]? = nil
   ) async throws -> HTTPResponse<T> {
     var urlRequest = try createURLRequest(path: path, method: method, parameters: parameters, headers: headers)
@@ -56,6 +73,44 @@ public final actor IHttpClient {
     let decodedData = try JSONDecoder().decode(T.self, from: data)
     return HTTPResponse(data: decodedData, response: response)
   }
+  
+  /// Perform a raw HTTP request without interceptor processing
+  /// - Parameters:
+  ///   - path: The path to request (appended to the base URL)
+  ///   - method: The HTTP method to use
+  ///   - parameters: The parameters to include in the request
+  ///   - headers: Additional headers to include
+  /// - Returns: The decoded response
+  public func performRawRequest<T: Decodable>(
+    _ path: String,
+    method: HTTPMethod = .get,
+    parameters: [String: Any]? = nil,
+    headers: [String: String]? = nil
+  ) async throws -> HTTPResponse<T> {
+    var urlRequest = URLRequest(url: baseURL.appendingPathComponent(path))
+    urlRequest.httpMethod = method.rawValue
+    headers?.forEach { urlRequest.setValue($0.value, forHTTPHeaderField: $0.key) }
+    
+    if let parameters = parameters {
+      urlRequest.httpBody = try? JSONSerialization.data(withJSONObject: parameters)
+      urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    }
+    
+    let (data, response) = try await session.data(for: urlRequest)
+    
+    guard !data.isEmpty, let httpResponse = response as? HTTPURLResponse else {
+      throw HTTPError.unknown
+    }
+    
+    if (400..<600).contains(httpResponse.statusCode) {
+      throw HTTPError.clientError(httpResponse.statusCode, nil)
+    }
+    
+    let decodedData = try JSONDecoder().decode(T.self, from: data)
+    return HTTPResponse(data: decodedData, response: response)
+  }
+  
+  // MARK: - Private Methods
   
   private func createURLRequest(
     path: String,
@@ -91,8 +146,8 @@ public final actor IHttpClient {
   private func handleErrorIfNeeded<T: Decodable>(
     response: HTTPURLResponse,
     data: Data,
-    originalRequest: (path: String, method: HTTPMethod, parameters: [String: Sendable]?, headers: [String: String]?),
-    client: IHttpClient,
+    originalRequest: (path: String, method: HTTPMethod, parameters: HTTPParameters?, headers: [String: String]?),
+    client: DefaultHttpClient,
     interceptors: [Interceptor]
   ) async throws -> HTTPResponse<T>? {
     for interceptor in interceptors {
@@ -118,34 +173,5 @@ public final actor IHttpClient {
     default:
       break
     }
-  }
-  
-  public func performRawRequest<T: Decodable>(
-    _ path: String,
-    method: HTTPMethod = .get,
-    parameters: [String: Any]? = nil,
-    headers: [String: String]? = nil
-  ) async throws -> HTTPResponse<T> {
-    var urlRequest = URLRequest(url: baseURL.appendingPathComponent(path))
-    urlRequest.httpMethod = method.rawValue
-    headers?.forEach { urlRequest.setValue($0.value, forHTTPHeaderField: $0.key) }
-    
-    if let parameters = parameters {
-      urlRequest.httpBody = try? JSONSerialization.data(withJSONObject: parameters)
-      urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    }
-    
-    let (data, response) = try await session.data(for: urlRequest)
-    
-    guard !data.isEmpty, let httpResponse = response as? HTTPURLResponse else {
-      throw HTTPError.unknown
-    }
-    
-    if (400..<600).contains(httpResponse.statusCode) {
-      throw HTTPError.clientError(httpResponse.statusCode, nil)
-    }
-    
-    let decodedData = try JSONDecoder().decode(T.self, from: data)
-    return HTTPResponse(data: decodedData, response: response)
   }
 }
