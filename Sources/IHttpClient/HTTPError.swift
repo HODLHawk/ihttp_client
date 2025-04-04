@@ -18,7 +18,7 @@ public enum HTTPError: Error, Sendable {
 }
 
 extension HTTPError {
-  var message: String {
+  public var message: String {
     switch self {
     case .unknown:
       return unknowClientError
@@ -29,7 +29,7 @@ extension HTTPError {
     }
   }
   
-  var code: String? {
+  public var code: String? {
     switch self {
     case .clientError(_, let apiErrorResponse):
       return apiErrorResponse?.code
