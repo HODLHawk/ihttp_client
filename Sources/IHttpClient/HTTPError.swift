@@ -6,39 +6,42 @@
 
 import Foundation
 
-let unknowClientError: String = "Unknown client error"
-let clientErrorOccurred: String = "Client error occurred"
-let unknowServerError: String = "Unknown server error"
-let serverErrorOccurred: String = "Server error occurred"
-let statusCodeStr: String = "Status Code"
+public struct HTTPErrorConstants {
+  public static let unknownClientError: String = "Unknown client error"
+  public static let emptyResponseError: String = "Empty response"
+  public static let clientErrorOccurred: String = "Client error occurred"
+  public static let serverErrorOccurred: String = "Server error occurred"
+  public static let statusCodeStr: String = "Status Code"
+}
 
-public enum HTTPError: Error, Sendable {
+public enum HTTPError<ErrorModel: Decodable & Sendable>: Error, Sendable {
   case unknown
   case emptyResponse
-  case clientError(Int, APIErrorResponse?)
+  case clientError(Int, ErrorModel?)
   case serverError(Int)
 }
 
-extension HTTPError {
+// Дефолтна реалізація для APIErrorResponse
+extension HTTPError where ErrorModel == APIErrorResponse {
   public var message: String {
     switch self {
-    case .unknown:
-      return unknowClientError
-    case .emptyResponse:
-      return unknowServerError
-    case .clientError(_, let apiErrorResponse):
-      return apiErrorResponse?.message ?? clientErrorOccurred
-    case .serverError(let statusCode):
-      return "\(serverErrorOccurred), \(statusCodeStr) : \(statusCode)"
+    case .unknown: return HTTPErrorConstants.unknownClientError
+    case .emptyResponse: return HTTPErrorConstants.emptyResponseError
+    case .clientError(_, let model): return model?.message ?? HTTPErrorConstants.clientErrorOccurred
+    case .serverError(let code): return "\(HTTPErrorConstants.serverErrorOccurred), \(HTTPErrorConstants.statusCodeStr): \(code)"
     }
   }
   
   public var code: String? {
-    switch self {
-    case .clientError(_, let apiErrorResponse):
-      return apiErrorResponse?.code
-    default:
-      return nil
-    }
+    guard case .clientError(_, let model) = self else { return nil }
+    return model?.code
+  }
+}
+
+// Узагальнена реалізація для будь-якої моделі
+extension HTTPError {
+  public func getErrorModel() -> ErrorModel? {
+    guard case .clientError(_, let model) = self else { return nil }
+    return model
   }
 }
