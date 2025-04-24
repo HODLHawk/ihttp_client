@@ -81,7 +81,7 @@ public final actor IHttpClient: DefaultHttpClient {
     applyInterceptors(for: response, data: data)
     
     guard let httpResponse = response as? HTTPURLResponse else {
-      if (data.isEmpty) {
+      if (response.expectedContentLength == 0) {
         if let emptyValue = EmptyDecodableFactory.makeEmptyValue(for: T.self) {
           return HTTPResponse(data: emptyValue, response: response)
         }
@@ -100,6 +100,14 @@ public final actor IHttpClient: DefaultHttpClient {
     
     // Error handling
     try validateResponse(httpResponse, data: data, errorModelType: errorModelType)
+    
+    // Empty response handling (e.g., 204 No Content)
+    if httpResponse.statusCode == 204 || data.isEmpty {
+      guard let emptyValue = EmptyDecodableFactory.makeEmptyValue(for: T.self) else {
+        throw HTTPError<E>.emptyResponse
+      }
+      return HTTPResponse(data: emptyValue, response: response)
+    }
     
     // Decode successful response
     let decodedData = try JSONDecoder().decode(T.self, from: data)
@@ -125,15 +133,17 @@ public final actor IHttpClient: DefaultHttpClient {
     let (data, response) = try await session.data(for: urlRequest)
     
     guard let httpResponse = response as? HTTPURLResponse else {
-      if (data.isEmpty) {
-        if let emptyValue = EmptyDecodableFactory.makeEmptyValue(for: T.self) {
-          return HTTPResponse(data: emptyValue, response: response)
-        }
-      }
       throw HTTPError<E>.unknown
     }
     
     try validateResponse(httpResponse, data: data, errorModelType: errorModelType)
+    
+    if httpResponse.statusCode == 204 || data.isEmpty {
+      guard let emptyValue = EmptyDecodableFactory.makeEmptyValue(for: T.self) else {
+        throw HTTPError<E>.emptyResponse
+      }
+      return HTTPResponse(data: emptyValue, response: response)
+    }
     
     let decodedData = try JSONDecoder().decode(T.self, from: data)
     return HTTPResponse(data: decodedData, response: response)
@@ -173,13 +183,15 @@ public final actor IHttpClient: DefaultHttpClient {
   ) throws {
     switch response.statusCode {
     case 200..<300:
-      return // Success
+      print("SUCCESS")
+      return
     case 400..<500:
       let errorModel = try? JSONDecoder().decode(E.self, from: data)
       throw HTTPError<E>.clientError(response.statusCode, errorModel)
     case 500..<600:
       throw HTTPError<E>.serverError(response.statusCode)
     default:
+      print("UNKNOWN ERROR S")
       throw HTTPError<E>.unknown
     }
   }
