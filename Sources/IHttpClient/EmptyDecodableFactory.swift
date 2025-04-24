@@ -14,6 +14,6 @@ enum EmptyDecodableFactory {
   }
 }
 
-public struct EmptyResponse: Decodable, Equatable {
+public struct EmptyResponse: Decodable, Equatable, Sendable {
   init() {}
 }
