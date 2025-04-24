@@ -183,7 +183,6 @@ public final actor IHttpClient: DefaultHttpClient {
   ) throws {
     switch response.statusCode {
     case 200..<300:
-      print("SUCCESS")
       return
     case 400..<500:
       let errorModel = try? JSONDecoder().decode(E.self, from: data)
@@ -191,7 +190,6 @@ public final actor IHttpClient: DefaultHttpClient {
     case 500..<600:
       throw HTTPError<E>.serverError(response.statusCode)
     default:
-      print("UNKNOWN ERROR S")
       throw HTTPError<E>.unknown
     }
   }
