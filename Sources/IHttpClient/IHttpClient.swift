@@ -81,6 +81,7 @@ public final actor IHttpClient: DefaultHttpClient {
   ///   - parameters: The parameters to include in the request
   ///   - headers: Additional headers to include
   /// - Returns: The decoded response
+
   public func performRawRequest<T: Decodable>(
     _ path: String,
     method: HTTPMethod = .get,
@@ -90,25 +91,33 @@ public final actor IHttpClient: DefaultHttpClient {
     var urlRequest = URLRequest(url: baseURL.appendingPathComponent(path))
     urlRequest.httpMethod = method.rawValue
     headers?.forEach { urlRequest.setValue($0.value, forHTTPHeaderField: $0.key) }
-    
+
     if let parameters = parameters {
-      urlRequest.httpBody = try? JSONSerialization.data(withJSONObject: parameters)
+      urlRequest.httpBody = try JSONSerialization.data(withJSONObject: parameters)
       urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
     }
-    
+
     let (data, response) = try await session.data(for: urlRequest)
-    
-    guard !data.isEmpty, let httpResponse = response as? HTTPURLResponse else {
+
+    guard let httpResponse = response as? HTTPURLResponse else {
       throw HTTPError.unknown
     }
-    
+
     if (400..<600).contains(httpResponse.statusCode) {
       throw HTTPError.clientError(httpResponse.statusCode, nil)
     }
-    
+
+    if httpResponse.statusCode == 204 || data.isEmpty {
+      guard let emptyValue = EmptyDecodableFactory.makeEmptyValue(for: T.self) else {
+        throw HTTPError.emptyResponse
+      }
+      return HTTPResponse(data: emptyValue, response: response)
+    }
+
     let decodedData = try JSONDecoder().decode(T.self, from: data)
     return HTTPResponse(data: decodedData, response: response)
   }
+
   
   // MARK: - Private Methods
   

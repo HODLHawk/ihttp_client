@@ -8,11 +8,13 @@ import Foundation
 
 let unknowClientError: String = "Unknown client error"
 let clientErrorOccurred: String = "Client error occurred"
+let unknowServerError: String = "Unknown server error"
 let serverErrorOccurred: String = "Server error occurred"
 let statusCodeStr: String = "Status Code"
 
 public enum HTTPError: Error, Sendable {
   case unknown
+  case emptyResponse
   case clientError(Int, APIErrorResponse?)
   case serverError(Int)
 }
@@ -22,6 +24,8 @@ extension HTTPError {
     switch self {
     case .unknown:
       return unknowClientError
+    case .emptyResponse:
+      return unknowServerError
     case .clientError(_, let apiErrorResponse):
       return apiErrorResponse?.message ?? clientErrorOccurred
     case .serverError(let statusCode):
