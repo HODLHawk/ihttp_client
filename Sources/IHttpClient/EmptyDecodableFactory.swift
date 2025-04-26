@@ -6,14 +6,14 @@
 //
 
 enum EmptyDecodableFactory {
-  static func makeEmptyValue<T: Decodable>(for type: T.Type) -> T? {
-    if T.self == EmptyResponse.self {
-      return EmptyResponse() as? T
+    static func makeEmptyValue<T: Decodable>(for type: T.Type) -> T? {
+        if T.self == EmptyResponse.self {
+            return EmptyResponse() as? T
+        }
+        return nil
     }
-    return nil
-  }
 }
 
 public struct EmptyResponse: Decodable, Equatable, Sendable {
-  init() {}
+    public init() {}
 }

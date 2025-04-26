@@ -6,26 +6,22 @@
 
 import Foundation
 
-// MARK: - HTTP Client Protocol
-
-/// Protocol defining HTTP client functionality
 public protocol DefaultHttpClient: Actor {
-  /// Add an interceptor to the HTTP client
-  func addInterceptor(_ interceptor: Interceptor)
-  
-  /// Perform an HTTP request and decode the response
-  func request<T: Decodable>(
-    _ path: String,
-    method: HTTPMethod,
-    parameters: HTTPParameters?,
-    headers: [String: String]?
-  ) async throws -> HTTPResponse<T>
-  
-  /// Perform a raw HTTP request without interceptors
-  func performRawRequest<T: Decodable>(
-    _ path: String,
-    method: HTTPMethod,
-    parameters: [String: Any]?,
-    headers: [String: String]?
-  ) async throws -> HTTPResponse<T>
+    func addInterceptor(_ interceptor: Interceptor)
+    
+    func request<T: Decodable, E: Decodable>(
+        _ path: String,
+        method: HTTPMethod,
+        parameters: HTTPParameters?,
+        headers: HTTPHeaders?,
+        errorModelType: E.Type
+    ) async throws -> HTTPResponse<T>
+    
+    func performRawRequest<T: Decodable, E: Decodable>(
+        _ path: String,
+        method: HTTPMethod,
+        parameters: HTTPParameters?,
+        headers: HTTPHeaders?,
+        errorModelType: E.Type
+    ) async throws -> HTTPResponse<T>
 }

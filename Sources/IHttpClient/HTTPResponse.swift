@@ -7,11 +7,11 @@
 import Foundation
 
 public struct HTTPResponse<T: Decodable & Sendable>: Sendable {
-  public let data: T
-  public let response: URLResponse
-  
-  public init(data: T, response: URLResponse) {
-    self.data = data
-    self.response = response
-  }
+    public let data: T
+    public let response: URLResponse
+    
+    public init(data: T, response: URLResponse) {
+        self.data = data
+        self.response = response
+    }
 }
