@@ -1,17 +1,17 @@
 //
-//  DefaultHttpClient.swift
+//  IHttpClientProtocol.swift
 //
 //  Created by Stepan Bezhuk on 24.03.2025.
 //
 
 import Foundation
 
-public protocol DefaultHttpClient: Actor {
+public protocol IHttpClientProtocol: Actor {
     func addInterceptor(_ interceptor: Interceptor)
     
     func request<T: Decodable, E: Decodable>(
         _ path: String,
-        method: HTTPMethod,
+        method: OriginalRequest.HTTPMethod,
         parameters: HTTPParameters?,
         headers: HTTPHeaders?,
         errorModelType: E.Type
@@ -19,7 +19,7 @@ public protocol DefaultHttpClient: Actor {
     
     func performRawRequest<T: Decodable, E: Decodable>(
         _ path: String,
-        method: HTTPMethod,
+        method: OriginalRequest.HTTPMethod,
         parameters: HTTPParameters?,
         headers: HTTPHeaders?,
         errorModelType: E.Type

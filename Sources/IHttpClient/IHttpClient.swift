@@ -6,7 +6,7 @@
 
 import Foundation
 
-public final actor IHttpClient: DefaultHttpClient {
+public final actor IHttpClient: IHttpClientProtocol {
     private let session: URLSession
     private let baseURL: URL
     private var interceptors: [Interceptor] = []
@@ -25,7 +25,7 @@ public final actor IHttpClient: DefaultHttpClient {
     
     public func request<T: Decodable & Sendable, E: Decodable & Sendable>(
         _ path: String,
-        method: HTTPMethod = .get,
+        method: OriginalRequest.HTTPMethod = .get,
         parameters: HTTPParameters? = nil,
         headers: HTTPHeaders? = nil,
         errorModelType: E.Type
@@ -35,7 +35,7 @@ public final actor IHttpClient: DefaultHttpClient {
     
     private func _request<T: Decodable & Sendable, E: Decodable & Sendable>(
         path: String,
-        method: HTTPMethod,
+        method: OriginalRequest.HTTPMethod,
         parameters: HTTPParameters?,
         headers: HTTPHeaders?,
         errorModelType: E.Type
@@ -55,10 +55,17 @@ public final actor IHttpClient: DefaultHttpClient {
             throw HTTPError<E>.unknown
         }
         
+        let originalRequest = OriginalRequest(
+            path: path,
+            method: method,
+            parameters: parameters,
+            headers: headers
+        )
+        
         if let retriedResponse = try await handleRetry(
             httpResponse: httpResponse,
             data: data,
-            originalRequest: (path, method, parameters, headers)
+            originalRequest: originalRequest
         ) as HTTPResponse<T>? {
             return retriedResponse
         }
@@ -80,7 +87,7 @@ public final actor IHttpClient: DefaultHttpClient {
     
     private func createURLRequest(
         path: String,
-        method: HTTPMethod,
+        method: OriginalRequest.HTTPMethod,
         parameters: HTTPParameters?,
         headers: HTTPHeaders?
     ) throws -> URLRequest {
@@ -124,7 +131,7 @@ public final actor IHttpClient: DefaultHttpClient {
     private func handleRetry<T: Decodable & Sendable>(
         httpResponse: HTTPURLResponse,
         data: Data,
-        originalRequest: (path: String, method: HTTPMethod, parameters: HTTPParameters?, headers: HTTPHeaders?)
+        originalRequest: OriginalRequest
     ) async throws -> HTTPResponse<T>? {
         for interceptor in interceptors {
             if let retriedResponse: HTTPResponse<T> = try? await interceptor.onError(
@@ -141,7 +148,7 @@ public final actor IHttpClient: DefaultHttpClient {
     
     public func performRawRequest<T: Decodable & Sendable, E: Decodable & Sendable>(
         _ path: String,
-        method: HTTPMethod = .get,
+        method: OriginalRequest.HTTPMethod = .get,
         parameters: HTTPParameters? = nil,
         headers: HTTPHeaders? = nil,
         errorModelType: E.Type
@@ -151,7 +158,7 @@ public final actor IHttpClient: DefaultHttpClient {
     
     private func _performRawRequest<T: Decodable & Sendable, E: Decodable & Sendable>(
         path: String,
-        method: HTTPMethod,
+        method: OriginalRequest.HTTPMethod,
         parameters: HTTPParameters?,
         headers: HTTPHeaders?,
         errorModelType: E.Type
