@@ -136,6 +136,7 @@ let config = ClientConfig<ApiError>(
         "X-App-Version": "1.0.0"
     ]
 )
+```
 
 ## 📝 Best Practices
 
