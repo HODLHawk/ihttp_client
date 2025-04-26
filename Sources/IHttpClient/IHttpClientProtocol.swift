@@ -6,13 +6,18 @@
 
 import Foundation
 
-/// Protocol defining the interface for HTTP client implementations
+/// Protocol defining HTTP client interface
 public protocol IHttpClientProtocol: Actor {
+    /// Type for decoding error responses
     associatedtype ErrorModel: Decodable & Sendable
     
-    // MARK: - Request Methods
-    
-    /// Makes an HTTP request with full interceptor support
+    /// Makes an HTTP request with interceptors
+    /// - Parameters:
+    ///   - path: Endpoint path
+    ///   - method: HTTP method
+    ///   - parameters: Request parameters
+    ///   - headers: Additional headers
+    /// - Returns: Decoded HTTP response
     func request<T: Decodable>(
         _ path: String,
         method: OriginalRequest.HTTPMethod,
@@ -21,6 +26,12 @@ public protocol IHttpClientProtocol: Actor {
     ) async throws -> HTTPResponse<T>
     
     /// Makes a raw HTTP request bypassing interceptors
+    /// - Parameters:
+    ///   - path: Endpoint path
+    ///   - method: HTTP method
+    ///   - parameters: Request parameters
+    ///   - headers: Additional headers
+    /// - Returns: Decoded HTTP response
     func performRawRequest<T: Decodable>(
         _ path: String,
         method: OriginalRequest.HTTPMethod,
@@ -28,41 +39,46 @@ public protocol IHttpClientProtocol: Actor {
         headers: HTTPHeaders?
     ) async throws -> HTTPResponse<T>
     
-    // MARK: - Interceptors
-    
-    /// Adds new request interceptor
+    /// Adds a new request/response interceptor
+    /// - Parameter interceptor: Interceptor to add
     func addInterceptor(_ interceptor: Interceptor)
-    
-    // MARK: - Cache Management
     
     /// Clears all cached responses
     func clearCache()
     
-    /// Gets current cache size
+    /// Gets current cache size in bytes
+    /// - Returns: Total cache size (memory + disk)
     func getCacheSize() -> Int
     
-    /// Removes cached response for URL
+    /// Removes cached response for specific URL
+    /// - Parameter url: URL to remove cache for
     func removeCachedResponse(for url: URL)
     
-    /// Gets cached response for request
+    /// Gets cached response for specific request
+    /// - Parameter request: Original URLRequest
+    /// - Returns: Cached response if available
     func getCachedResponse(for request: URLRequest) -> CachedURLResponse?
     
-    // MARK: - Configuration
-    
     /// Updates client configuration
+    /// - Parameter config: New configuration
     func updateConfig<NewErrorModel: Decodable & Sendable>(_ config: ClientConfig<NewErrorModel>)
     
     /// Returns current configuration
+    /// - Returns: Active configuration
     func getConfig() -> ClientConfig<ErrorModel>
     
-    // MARK: - Initialization
-    
     /// Creates client with configuration
+    /// - Parameter config: Complete client configuration
     init<Model: Decodable & Sendable>(config: ClientConfig<Model>)
 }
 
 public extension IHttpClientProtocol {
     /// Convenience initializer
+    /// - Parameters:
+    ///   - baseURL: Base URL for requests
+    ///   - errorModelType: Type for decoding error responses
+    ///   - session: URLSession to use (default: .shared)
+    ///   - cacheConfig: Cache configuration (default: nil)
     init(
         baseURL: String,
         errorModelType: ErrorModel.Type,

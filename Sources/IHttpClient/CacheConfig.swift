@@ -7,18 +7,27 @@
 
 import Foundation
 
-/// HTTP request caching configuration
+/// Configuration for HTTP request caching
 public struct CacheConfig {
-    /// Maximum cache size in bytes (default 10MB)
+    /// Maximum in-memory cache size in bytes
     public let memoryCapacity: Int
     
-    /// Maximum disk cache size in bytes (default 50MB)
+    /// Maximum disk cache size in bytes
     public let diskCapacity: Int
     
-    /// Cache storage directory (system by default)
+    /// Custom directory path for cache storage
     public let diskPath: String?
     
-    public init(memoryCapacity: Int = 10_000_000, diskCapacity: Int = 50_000_000, diskPath: String? = nil) {
+    /// Initializes a new cache configuration
+    /// - Parameters:
+    ///   - memoryCapacity: Size of in-memory cache in bytes (default: 10MB)
+    ///   - diskCapacity: Size of disk cache in bytes (default: 50MB)
+    ///   - diskPath: Optional custom directory path (default: nil)
+    public init(
+        memoryCapacity: Int = 10_000_000,
+        diskCapacity: Int = 50_000_000,
+        diskPath: String? = nil
+    ) {
         self.memoryCapacity = memoryCapacity
         self.diskCapacity = diskCapacity
         self.diskPath = diskPath

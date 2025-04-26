@@ -6,11 +6,11 @@
 
 import Foundation
 
-/// Represents an HTTP response with decoded data
-/// - Generic parameter T: The decodable response type
+/// Container for HTTP response data
 public struct HTTPResponse<T: Decodable & Sendable>: Sendable {
     /// The decoded response data
     public let data: T
+    
     /// The original URL response
     public let response: URLResponse
     

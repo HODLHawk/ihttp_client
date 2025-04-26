@@ -5,15 +5,18 @@
 //  Created by Stepan Bezhuk on 26.04.2025.
 //
 
-/// Represents the original request configuration
+/// Represents original request configuration
 public struct OriginalRequest: Sendable {
-    /// The request path
+    /// Request path component
     let path: String
-    /// The HTTP method
+    
+    /// HTTP method
     let method: HTTPMethod
-    /// Optional request parameters
+    
+    /// Request parameters
     let parameters: HTTPParameters?
-    /// Optional request headers
+    
+    /// Request headers
     let headers: HTTPHeaders?
     
     /// Supported HTTP methods

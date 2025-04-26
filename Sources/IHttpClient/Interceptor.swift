@@ -6,33 +6,55 @@
 
 import Foundation
 
-/// Protocol for intercepting HTTP requests and responses
+/// Protocol for intercepting HTTP requests/responses
 public protocol Interceptor: Sendable {
-    /// Called before sending a request
-    /// - Parameter request: The request about to be sent
+    /// Called before request is sent
+    /// - Parameter request: Request to modify
     func willSend(request: inout URLRequest)
     
-    /// Called after receiving a response
+    /// Called after response is received
     /// - Parameters:
-    ///   - response: The received response
-    ///   - data: The response data
+    ///   - response: Received response
+    ///   - data: Response data
     func didReceive(response: URLResponse, data: Data)
     
-    /// Called when an error occurs, allows modifying or retrying the request
+    /// Called when error occurs (allows retry/modification)
     /// - Parameters:
-    ///   - response: The error response
-    ///   - data: The error data
-    ///   - originalRequest: The original request
-    ///   - client: The HTTP client
-    /// - Returns: A new response if the error was handled, nil otherwise
-    func onError<ErrorModel: Decodable>(response: HTTPURLResponse, data: Data, originalRequest: OriginalRequest, client: IHttpClientProtocol) async throws -> HTTPResponse<ErrorModel>?
+    ///   - response: Error response
+    ///   - data: Response data
+    ///   - originalRequest: Original request
+    ///   - client: HTTP client instance
+    /// - Returns: New response if error was handled
+    func onError<ErrorModel: Decodable>(
+        response: HTTPURLResponse,
+        data: Data,
+        originalRequest: OriginalRequest,
+        client: any IHttpClientProtocol
+    ) async throws -> HTTPResponse<ErrorModel>?
 }
 
 public extension Interceptor {
-    /// Default empty implementation for willSend
+    /// Default empty implementation
+    /// - Parameter request: Request to modify
     func willSend(request: inout URLRequest) {}
-    /// Default empty implementation for didReceive
+    
+    /// Default empty implementation
+    /// - Parameters:
+    ///   - response: Received response
+    ///   - data: Response data
     func didReceive(response: URLResponse, data: Data) {}
-    /// Default empty implementation for onError
-    func onError<ErrorModel: Decodable>(response: HTTPURLResponse, data: Data, originalRequest: OriginalRequest, client: IHttpClientProtocol) async throws -> HTTPResponse<ErrorModel>? { nil }
+    
+    /// Default empty implementation
+    /// - Parameters:
+    ///   - response: Error response
+    ///   - data: Response data
+    ///   - originalRequest: Original request
+    ///   - client: HTTP client instance
+    /// - Returns: nil (no retry)
+    func onError<ErrorModel: Decodable>(
+        response: HTTPURLResponse,
+        data: Data,
+        originalRequest: OriginalRequest,
+        client: any IHttpClientProtocol
+    ) async throws -> HTTPResponse<ErrorModel>? { nil }
 }

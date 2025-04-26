@@ -7,29 +7,38 @@
 
 import Foundation
 
-/// Global HTTP client configuration with generic error model type
+/// Global configuration for HTTP client
 public struct ClientConfig<ErrorModel: Decodable & Sendable> {
     /// Base URL for all requests
     public let baseURL: String
     
-    /// Type for decoding error responses
+    /// Type used for decoding error responses
     public let errorModelType: ErrorModel.Type
     
-    /// URLSession configuration
+    /// Configuration for underlying URLSession
     public let sessionConfiguration: URLSessionConfiguration
     
-    /// Cache configuration
+    /// Cache configuration settings
     public let cacheConfig: CacheConfig?
     
-    /// Default headers for all requests
+    /// Default headers applied to all requests
     public let defaultHeaders: HTTPHeaders
     
-    /// Request timeout interval
+    /// Request timeout interval in seconds
     public let timeoutInterval: TimeInterval
     
-    /// Enables request/response logging
+    /// Enables debug logging for requests/responses
     public let enableLogging: Bool
     
+    /// Initializes a new client configuration
+    /// - Parameters:
+    ///   - baseURL: Base URL for all requests
+    ///   - errorModelType: Type for decoding error responses
+    ///   - sessionConfiguration: URLSession configuration (default: .default)
+    ///   - cacheConfig: Cache configuration (default: nil)
+    ///   - defaultHeaders: Default headers (default: empty)
+    ///   - timeoutInterval: Request timeout in seconds (default: 60)
+    ///   - enableLogging: Enables debug logging (default: false)
     public init(
         baseURL: String,
         errorModelType: ErrorModel.Type,

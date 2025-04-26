@@ -8,28 +8,38 @@ import Foundation
 
 /// Contains constants for HTTP error messages
 public struct HTTPErrorConstants {
-    /// Message for unknown client errors
+    /// Default message for unknown client errors
     public static let unknownClientError: String = "Unknown client error"
+    
     /// Message for empty responses
     public static let emptyResponseError: String = "Empty response"
-    /// Message when client error occurs
+    
+    /// Default message for client errors
     public static let clientErrorOccurred: String = "Client error occurred"
-    /// Message when server error occurs
+    
+    /// Default message for server errors
     public static let serverErrorOccurred: String = "Server error occurred"
-    /// String representation for status code
+    
+    /// Label for status codes
     public static let statusCodeStr: String = "Status Code"
 }
 
-/// Represents possible HTTP errors
-/// - Generic parameter ErrorModel: The decodable error model type
+/// Represents HTTP request errors
 public enum HTTPError<ErrorModel: Decodable & Sendable>: Error, Sendable {
-    /// Unknown error occurred
+    /// Unknown/unclassified error
     case unknown
-    /// Response was empty
+    
+    /// Empty response received
     case emptyResponse
-    /// Client error (4xx) with status code and optional error model
+    
+    /// Client error (4xx status code)
+    /// - Parameters:
+    ///   - Int: HTTP status code
+    ///   - ErrorModel?: Optional decoded error model
     case clientError(Int, ErrorModel?)
-    /// Server error (5xx) with status code
+    
+    /// Server error (5xx status code)
+    /// - Parameter Int: HTTP status code
     case serverError(Int)
 }
 
@@ -40,16 +50,13 @@ extension HTTPError {
         case .unknown: return HTTPErrorConstants.unknownClientError
         case .emptyResponse: return HTTPErrorConstants.emptyResponseError
         case .clientError(_, let model):
-            if let model = model as? CustomStringConvertible {
-                return model.description
-            }
-            return HTTPErrorConstants.clientErrorOccurred
+            return (model as? CustomStringConvertible)?.description ?? HTTPErrorConstants.clientErrorOccurred
         case .serverError(let code):
             return "\(HTTPErrorConstants.serverErrorOccurred), \(HTTPErrorConstants.statusCodeStr): \(code)"
         }
     }
     
-    /// Extracts the error model from the error
+    /// Extracts the decoded error model from client errors
     /// - Returns: The error model if available
     public func getErrorModel() -> ErrorModel? {
         guard case .clientError(_, let model) = self else { return nil }
