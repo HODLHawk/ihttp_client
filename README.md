@@ -21,6 +21,7 @@ Add to your `Package.swift`:
 dependencies: [
     .package(url: "https://github.com/your-repo/IHttpClient.git", from: "1.0.0")
 ]
+```
 
 Or add via Xcode:
 File → Add Packages → Enter package URL
