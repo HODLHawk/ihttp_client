@@ -8,16 +8,16 @@
 /// Represents original request configuration
 public struct OriginalRequest: Sendable {
     /// Request path component
-    let path: String
+    public let path: String
     
     /// HTTP method
-    let method: HTTPMethod
+    public let method: HTTPMethod
     
     /// Request parameters
-    let parameters: HTTPParameters?
+    public let parameters: HTTPParameters?
     
     /// Request headers
-    let headers: HTTPHeaders?
+    public let headers: HTTPHeaders?
     
     /// Supported HTTP methods
     public enum HTTPMethod: String, Sendable {
