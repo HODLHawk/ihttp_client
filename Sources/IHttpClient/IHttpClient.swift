@@ -2,193 +2,114 @@
 //  IHttpClient.swift
 //
 //  Created by Stepan Bezhuk on 14.03.2025.
-//  Documentation last updated: 27.06.2025
 //
 
 import Foundation
 
-/// A modern, thread-safe HTTP client with interceptors, caching and configuration support.
-///
-/// ## Features
-/// - Async/await native interface
-/// - Request/response interception
-/// - Configurable caching (memory/disk)
-/// - Centralized configuration
-/// - Comprehensive error handling
-///
-/// ## Usage
-/// ```swift
-/// let config = ClientConfig(
-///     baseURL: "https://api.example.com",
-///     cacheConfig: CacheConfig(memoryCapacity: 20_000_000)
-/// )
-/// let client = IHttpClient(config: config)
-///
-/// let response = try await client.request(
-///     "/users",
-///     method: .get,
-///     errorModelType: APIError.self
-/// )
-/// ```
-public final actor IHttpClient: IHttpClientProtocol {
+/// Main HTTP client implementation
+public final actor IHttpClient<ErrorModel: Decodable & Sendable>: IHttpClientProtocol {
     // MARK: - Properties
-    
-    /// Current client configuration
-    private var config: ClientConfig
-    
-    /// Underlying URLSession instance
+    private var config: ClientConfig<ErrorModel>
     private var session: URLSession
-    
-    /// Registered request/response interceptors
     private var interceptors: [Interceptor] = []
     
-    /// Computed base URL from configuration
     private var baseURL: URL {
         guard let url = URL(string: config.baseURL) else {
             fatalError("Invalid baseURL in config: \(config.baseURL)")
         }
         return url
     }
-    
+
     // MARK: - Initialization
     
-    /// Initializes a new HTTP client with full configuration
-    /// - Parameter config: Complete client configuration
-    public init(config: ClientConfig) {
-        self.config = config
+    public init<Model: Decodable & Sendable>(config: ClientConfig<Model>) {
+        self.config = config as! ClientConfig<ErrorModel>
         self.session = Self.configureSession(config: config)
     }
     
-    /// Convenience initializer for backward compatibility
-    /// - Parameters:
-    ///   - baseURL: Base API URL string
-    ///   - session: URLSession to use (default: .shared)
-    ///   - cacheConfig: Optional cache configuration
     public init(
         baseURL: String,
+        errorModelType: ErrorModel.Type,
         session: URLSession = .shared,
         cacheConfig: CacheConfig? = nil
     ) {
         self.init(config: ClientConfig(
             baseURL: baseURL,
+            errorModelType: errorModelType,
             sessionConfiguration: session.configuration,
             cacheConfig: cacheConfig
         ))
     }
     
-    // MARK: - Configuration Management
+    // MARK: - Public Methods
     
-    /// Updates client configuration
-    /// - Parameter config: New configuration settings
-    ///
-    /// ## Note
-    /// Recreates URLSession if session configuration changed
-    public func updateConfig(_ config: ClientConfig) {
-        self.config = config
-        if session.configuration != config.sessionConfiguration {
-            self.session = Self.configureSession(config: config)
-        }
-    }
-    
-    /// Returns current client configuration
-    /// - Returns: Active configuration object
-    public func getConfig() -> ClientConfig {
-        return config
-    }
-    
-    // MARK: - Cache Management
-    
-    /// Clears all cached responses (both memory and disk)
-    public func clearCache() {
-        session.configuration.urlCache?.removeAllCachedResponses()
-    }
-    
-    /// Gets current cache size in bytes
-    /// - Returns: Total size of cached data (memory + disk)
-    public func getCacheSize() -> Int {
-        guard let cache = session.configuration.urlCache else { return 0 }
-        return cache.currentMemoryUsage + cache.currentDiskUsage
-    }
-    
-    /// Removes cached response for specific URL
-    /// - Parameter url: URL to remove cache for
-    public func removeCachedResponse(for url: URL) {
-        let request = URLRequest(url: url)
-        session.configuration.urlCache?.removeCachedResponse(for: request)
-    }
-    
-    /// Retrieves cached response for request
-    /// - Parameter request: Original URLRequest
-    /// - Returns: Cached response if available
-    public func getCachedResponse(for request: URLRequest) -> CachedURLResponse? {
-        return session.configuration.urlCache?.cachedResponse(for: request)
-    }
-    
-    // MARK: - Request Methods
-    
-    /// Makes an HTTP request with full interceptor support
-    /// - Parameters:
-    ///   - path: Endpoint path
-    ///   - method: HTTP method
-    ///   - parameters: Request body parameters
-    ///   - headers: Additional headers
-    ///   - errorModelType: Type for decoding error responses
-    /// - Returns: Decoded response
-    public func request<T: Decodable & Sendable, E: Decodable & Sendable>(
+    public func request<T: Decodable>(
         _ path: String,
         method: OriginalRequest.HTTPMethod = .get,
         parameters: HTTPParameters? = nil,
-        headers: HTTPHeaders? = nil,
-        errorModelType: E.Type
+        headers: HTTPHeaders? = nil
     ) async throws -> HTTPResponse<T> {
         try await _request(
             path: path,
             method: method,
             parameters: parameters,
-            headers: headers,
-            errorModelType: errorModelType
+            headers: headers
         )
     }
     
-    /// Makes a raw HTTP request bypassing interceptors
-    /// - Parameters:
-    ///   - path: Endpoint path
-    ///   - method: HTTP method
-    ///   - parameters: Request body parameters
-    ///   - headers: Additional headers
-    ///   - errorModelType: Type for decoding error responses
-    /// - Returns: Decoded response
-    public func performRawRequest<T: Decodable & Sendable, E: Decodable & Sendable>(
+    public func performRawRequest<T: Decodable>(
         _ path: String,
         method: OriginalRequest.HTTPMethod = .get,
         parameters: HTTPParameters? = nil,
-        headers: HTTPHeaders? = nil,
-        errorModelType: E.Type
+        headers: HTTPHeaders? = nil
     ) async throws -> HTTPResponse<T> {
         try await _performRawRequest(
             path: path,
             method: method,
             parameters: parameters,
-            headers: headers,
-            errorModelType: errorModelType
+            headers: headers
         )
     }
     
-    /// Adds new request interceptor
-    /// - Parameter interceptor: Interceptor implementation
     public func addInterceptor(_ interceptor: Interceptor) {
         interceptors.append(interceptor)
     }
     
-    // MARK: - Private Implementation
+    public func clearCache() {
+        session.configuration.urlCache?.removeAllCachedResponses()
+    }
     
-    /// Internal request implementation with interceptors
-    private func _request<T: Decodable & Sendable, E: Decodable & Sendable>(
+    public func getCacheSize() -> Int {
+        guard let cache = session.configuration.urlCache else { return 0 }
+        return cache.currentMemoryUsage + cache.currentDiskUsage
+    }
+    
+    public func removeCachedResponse(for url: URL) {
+        session.configuration.urlCache?.removeCachedResponse(for: URLRequest(url: url))
+    }
+    
+    public func getCachedResponse(for request: URLRequest) -> CachedURLResponse? {
+        session.configuration.urlCache?.cachedResponse(for: request)
+    }
+    
+    public func updateConfig<NewErrorModel: Decodable & Sendable>(_ config: ClientConfig<NewErrorModel>) {
+        self.config = config as! ClientConfig<ErrorModel>
+        if session.configuration != config.sessionConfiguration {
+            self.session = Self.configureSession(config: config)
+        }
+    }
+    
+    public func getConfig() -> ClientConfig<ErrorModel> {
+        return config
+    }
+    
+    // MARK: - Private Methods
+    
+    private func _request<T: Decodable>(
         path: String,
         method: OriginalRequest.HTTPMethod,
         parameters: HTTPParameters?,
-        headers: HTTPHeaders?,
-        errorModelType: E.Type
+        headers: HTTPHeaders?
     ) async throws -> HTTPResponse<T> {
         var urlRequest = try createURLRequest(
             path: path,
@@ -197,25 +118,18 @@ public final actor IHttpClient: IHttpClientProtocol {
             headers: headers
         )
         
-        // Apply request interceptors
         applyInterceptors(for: &urlRequest)
-        
-        // Execute request
         let (data, response) = try await session.data(for: urlRequest)
-        
-        // Apply response interceptors
         applyInterceptors(for: response, data: data)
         
-        // Handle empty responses
         guard let httpResponse = response as? HTTPURLResponse else {
             if response.expectedContentLength == 0,
                let emptyValue = EmptyDecodableFactory.makeEmptyValue(for: T.self) {
                 return HTTPResponse(data: emptyValue, response: response)
             }
-            throw HTTPError<E>.unknown
+            throw HTTPError<ErrorModel>.unknown
         }
         
-        // Handle retry logic
         let originalRequest = OriginalRequest(
             path: path,
             method: method,
@@ -231,35 +145,29 @@ public final actor IHttpClient: IHttpClientProtocol {
             return retriedResponse
         }
         
-        // Validate response status
-        try validateResponse(httpResponse, data: data, errorModelType: errorModelType)
+        try validateResponse(httpResponse, data: data)
         
-        // Handle no-content responses
         if httpResponse.statusCode == 204 || data.isEmpty {
             guard let emptyValue = EmptyDecodableFactory.makeEmptyValue(for: T.self) else {
-                throw HTTPError<E>.emptyResponse
+                throw HTTPError<ErrorModel>.emptyResponse
             }
             return HTTPResponse(data: emptyValue, response: response)
         }
         
-        // Decode successful response
         let decodedData = try JSONDecoder().decode(T.self, from: data)
         return HTTPResponse(data: decodedData, response: response)
     }
     
-    /// Internal raw request implementation
-    private func _performRawRequest<T: Decodable & Sendable, E: Decodable & Sendable>(
+    private func _performRawRequest<T: Decodable>(
         path: String,
         method: OriginalRequest.HTTPMethod,
         parameters: HTTPParameters?,
-        headers: HTTPHeaders?,
-        errorModelType: E.Type
+        headers: HTTPHeaders?
     ) async throws -> HTTPResponse<T> {
         var urlRequest = URLRequest(url: baseURL.appendingPathComponent(path))
         urlRequest.httpMethod = method.rawValue
         urlRequest.timeoutInterval = config.timeoutInterval
         
-        // Merge default and request-specific headers
         let allHeaders = config.defaultHeaders.merging(headers ?? [:]) { $1 }
         allHeaders.forEach { urlRequest.setValue($1, forHTTPHeaderField: $0) }
         
@@ -273,14 +181,14 @@ public final actor IHttpClient: IHttpClientProtocol {
         let (data, response) = try await session.data(for: urlRequest)
         
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw HTTPError<E>.unknown
+            throw HTTPError<ErrorModel>.unknown
         }
         
-        try validateResponse(httpResponse, data: data, errorModelType: errorModelType)
+        try validateResponse(httpResponse, data: data)
         
         if httpResponse.statusCode == 204 || data.isEmpty {
             guard let emptyValue = EmptyDecodableFactory.makeEmptyValue(for: T.self) else {
-                throw HTTPError<E>.emptyResponse
+                throw HTTPError<ErrorModel>.emptyResponse
             }
             return HTTPResponse(data: emptyValue, response: response)
         }
@@ -289,13 +197,11 @@ public final actor IHttpClient: IHttpClientProtocol {
         return HTTPResponse(data: decodedData, response: response)
     }
     
-    // MARK: - Private Helpers
-    
-    /// Configures URLSession based on configuration
-    private static func configureSession(config: ClientConfig) -> URLSession {
+    private static func configureSession<Model: Decodable & Sendable>(
+        config: ClientConfig<Model>
+    ) -> URLSession {
         let configuration = config.sessionConfiguration
         
-        // Configure caching
         if let cacheConfig = config.cacheConfig {
             let cache = URLCache(
                 memoryCapacity: cacheConfig.memoryCapacity,
@@ -306,10 +212,8 @@ public final actor IHttpClient: IHttpClientProtocol {
             configuration.requestCachePolicy = .useProtocolCachePolicy
         }
         
-        // Apply timeout
         configuration.timeoutIntervalForRequest = config.timeoutInterval
         
-        // Apply default headers
         if !config.defaultHeaders.isEmpty {
             configuration.httpAdditionalHeaders = config.defaultHeaders
         }
@@ -317,7 +221,6 @@ public final actor IHttpClient: IHttpClientProtocol {
         return URLSession(configuration: configuration)
     }
     
-    /// Creates configured URLRequest
     private func createURLRequest(
         path: String,
         method: OriginalRequest.HTTPMethod,
@@ -328,7 +231,6 @@ public final actor IHttpClient: IHttpClientProtocol {
         urlRequest.httpMethod = method.rawValue
         urlRequest.timeoutInterval = config.timeoutInterval
         
-        // Merge default and request-specific headers
         let allHeaders = config.defaultHeaders.merging(headers ?? [:]) { $1 }
         allHeaders.forEach { urlRequest.setValue($1, forHTTPHeaderField: $0) }
         
@@ -342,37 +244,31 @@ public final actor IHttpClient: IHttpClientProtocol {
         return urlRequest
     }
     
-    /// Applies request interceptors
     private func applyInterceptors(for request: inout URLRequest) {
         interceptors.forEach { $0.willSend(request: &request) }
     }
     
-    /// Applies response interceptors
     private func applyInterceptors(for response: URLResponse, data: Data) {
         interceptors.forEach { $0.didReceive(response: response, data: data) }
     }
     
-    /// Validates HTTP response status codes
-    private func validateResponse<E: Decodable & Sendable>(
+    private func validateResponse(
         _ response: HTTPURLResponse,
-        data: Data,
-        errorModelType: E.Type
+        data: Data
     ) throws {
         switch response.statusCode {
-        case 200..<300:
-            return
+        case 200..<300: return
         case 400..<500:
-            let errorModel = try? JSONDecoder().decode(E.self, from: data)
-            throw HTTPError<E>.clientError(response.statusCode, errorModel)
+            let model = try? JSONDecoder().decode(ErrorModel.self, from: data)
+            throw HTTPError<ErrorModel>.clientError(response.statusCode, model)
         case 500..<600:
-            throw HTTPError<E>.serverError(response.statusCode)
+            throw HTTPError<ErrorModel>.serverError(response.statusCode)
         default:
-            throw HTTPError<E>.unknown
+            throw HTTPError<ErrorModel>.unknown
         }
     }
     
-    /// Handles request retry logic
-    private func handleRetry<T: Decodable & Sendable>(
+    private func handleRetry<T: Decodable>(
         httpResponse: HTTPURLResponse,
         data: Data,
         originalRequest: OriginalRequest
