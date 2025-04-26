@@ -1,130 +1,160 @@
-# HTTP Client
+# 🌐 IHttpClient - Modern Swift HTTP Client
 
-This project provides an asynchronous HTTP client for interacting with REST APIs, supporting HTTP request configurations, error handling, and integration with interceptors. The client uses standard HTTP methods (GET, POST, PUT, DELETE) to communicate with APIs.
+**A type-safe, actor-based HTTP client with interceptors and caching support**
 
-## Features
+## 📦 Features
 
-- Sending HTTP requests with support for various methods (GET, POST, PUT, DELETE).
-- Automatic header management, e.g., `Content-Type: application/json`.
-- Support for query parameters in JSON format.
-- Interceptor mechanism for handling requests and responses.
-- Error handling with customizable behavior via interceptors.
-- Simple and convenient API for interacting with HTTP requests.
+- 🚀 **Full async/await support**
+- 🔄 **Request/response interceptors**
+- 💾 **Configurable caching**
+- 🛡️ **Type-safe error handling**
+- 🧵 **Thread-safe (actor-based)**
+- ⚙️ **Customizable configuration**
 
-## Example Usage
+## 📥 Installation
+
+### Swift Package Manager
+
+Add to your `Package.swift`:
 
 ```swift
-import Foundation
+dependencies: [
+    .package(url: "https://github.com/your-repo/IHttpClient.git", from: "1.0.0")
+]
 
-// Initialize the client
-let client = IHttpClient(baseURL: URL(string: "https://api.example.com")!)
+Or add via Xcode:
+File → Add Packages → Enter package URL
 
-// Example of a GET request
-async {
-    do {
-        let response: HTTPResponse<MyModel> = try await client.request("/path/to/resource")
-        print(response.data)
-    } catch {
-        print("Error: \(error)")
-    }
-}
+## 🏁 Quick Start
 
-// Example of a POST request
-async {
-    do {
-        let parameters: [String: Any] = ["key": "value"]
-        let response: HTTPResponse<MyModel> = try await client.request("/path/to/resource", method: .post, parameters: parameters)
-        print(response.data)
-    } catch {
-        print("Error: \(error)")
-    }
+1. Define Error Model
+
+```swift
+struct ApiError: Decodable, Sendable {
+    let message: String
+    let code: Int
 }
 ```
 
-# HTTP Client with Interceptors
-
-This repository contains an HTTP client for performing asynchronous HTTP requests with support for interceptors. The HTTP client allows you to customize the request and response flow, including modifying headers, handling errors, and retrying requests.
-
-## Features
-
-- **Custom Interceptors**: Modify request/response behavior before and after sending requests.
-- **Asynchronous Requests**: Uses async/await for non-blocking network operations.
-- **Flexible Error Handling**: Provides a custom error handling mechanism with retry support.
-- **Easy-to-use Interface**: Simple API for sending GET, POST, PUT, and DELETE requests.
-
-## Example Usage
+2. Initialize Client
 
 ```swift
-import Foundation
-
-// Initialize the HTTP client
-let client = HTTPClient(baseURL: URL(string: "https://api.example.com")!)
-
-// Add the LoggingInterceptor
-client.addInterceptor(LoggingInterceptor())
-
-// Example of a GET request
-async {
-    do {
-        let response: HTTPResponse<MyModel> = try await client.request("/path/to/resource")
-        print(response.data)
-    } catch {
-        print("Error: \(error)")
-    }
-}
-
-// Example of a POST request
-async {
-    do {
-        let parameters: [String: Any] = ["key": "value"]
-        let response: HTTPResponse<MyModel> = try await client.request("/path/to/resource", method: .post, parameters: parameters)
-        print(response.data)
-    } catch {
-        print("Error: \(error)")
-    }
-}
+let client = IHttpClient<ApiError>(
+    baseURL: "https://api.example.com",
+    errorModelType: ApiError.self
+)
 ```
 
-## Interceptor example
+3. Make Requests
 
 ```swift
-import Foundation
+// GET request
+let users = try await client.request(
+    "/users",
+    method: .get
+)
 
-// Define a custom interceptor that logs request and response details
-class LoggingInterceptor: Interceptor {
-    
-    // This method is called before sending the request
+// POST with parameters
+let response = try await client.request(
+    "/posts",
+    method: .post,
+    parameters: ["title": "Hello"],
+    headers: ["X-App-Version": "1.0"]
+)
+```
+
+## 🛠 Advanced Usage
+
+**Interceptors**
+
+```swift
+struct AuthInterceptor: Interceptor {
     func willSend(request: inout URLRequest) {
-        print("Request: \(request.httpMethod ?? "Unknown method") \(request.url?.absoluteString ?? "Unknown URL")")
-    }
-    
-    // This method is called after receiving the response
-    func didReceive(response: URLResponse, data: Data) {
-        if let httpResponse = response as? HTTPURLResponse {
-            print("Response: \(httpResponse.statusCode) from \(httpResponse.url?.absoluteString ?? "Unknown URL")")
-        }
-        
-        if let json = try? JSONSerialization.jsonObject(with: data, options: []) {
-            print("Response Data: \(json)")
-        }
-    }
-    
-    // Optional: This method can be used to handle errors or retry logic
-    func onError<T: Decodable>(
-        response: HTTPURLResponse,
-        data: Data,
-        originalRequest: (path: String, method: HTTPMethod, parameters: HTTPParameters?, headers: [String: String]?),
-        client: IHttpClient
-    ) async throws -> HTTPResponse<T>? {
-        // Retry on server errors (5xx responses)
-        if (500...599).contains(response.statusCode) {
-            print("Server error detected, retrying...")
-            return try await client.request(originalRequest.path, method: originalRequest.method, parameters: originalRequest.parameters, headers: originalRequest.headers)
-        }
-        
-        // Return nil if we don't want to retry
-        return nil
+        request.addValue("Bearer token123", forHTTPHeaderField: "Authorization")
     }
 }
 
+client.addInterceptor(AuthInterceptor())
 ```
+
+**Caching**
+
+```swift
+let cacheConfig = CacheConfig(
+    memoryCapacity: 20_000_000,  // 20MB
+    diskCapacity: 100_000_000    // 100MB
+)
+
+let cachedClient = IHttpClient<ApiError>(
+    baseURL: "https://api.example.com",
+    errorModelType: ApiError.self,
+    cacheConfig: cacheConfig
+)
+```
+
+**Error Handling**
+
+```swift
+do {
+    let data = try await client.request("/protected")
+} catch HTTPError<ApiError>.clientError(let code, let model) {
+    print("Error \(code): \(model?.message ?? "Unknown")")
+} catch {
+    print("Request failed: \(error)")
+}
+```
+
+## ⚙️ Configuration Options
+
+| Parameter           | Type                  | Description                     | Default Value  |
+|---------------------|-----------------------|---------------------------------|----------------|
+| `baseURL`           | `String`              | Base API URL                    | **Required**   |
+| `errorModelType`    | `Decodable.Type`      | Type for error responses        | **Required**   |
+| `session`           | `URLSession`          | Custom URLSession instance      | `.shared`      |
+| `cacheConfig`       | `CacheConfig?`        | Cache configuration             | `nil`          |
+| `timeoutInterval`   | `TimeInterval`        | Request timeout in seconds      | `60.0`         |
+| `enableLogging`     | `Bool`                | Enable debug logging            | `false`        |
+| `defaultHeaders`    | `HTTPHeaders`         | Default request headers         | `[:]`          |
+| `retryCount`        | `Int`                 | Number of automatic retries     | `0`            |
+
+### Usage Example:
+
+```swift
+let config = ClientConfig<ApiError>(
+    baseURL: "https://api.example.com/v1",
+    errorModelType: ApiError.self,
+    session: customSession,
+    cacheConfig: CacheConfig(
+        memoryCapacity: 20_000_000,
+        diskCapacity: 100_000_000
+    ),
+    timeoutInterval: 30.0,
+    enableLogging: true,
+    defaultHeaders: [
+        "Accept": "application/json",
+        "X-App-Version": "1.0.0"
+    ]
+)
+
+## 📝 Best Practices
+
+Reuse clients - Create one client per API endpoint
+Centralize error handling - Create wrapper functions
+Use interceptors for:
+Authentication
+Logging
+Request modification
+Implement retry logic in interceptors
+
+##  🤝 Contributing
+
+Pull requests welcome! Please:
+
+Open an issue first
+Follow Swift style guidelines
+Add tests for new features
+
+## 📜 License
+
+MIT License
+Copyright © 2025 Stepan Bezhuk
